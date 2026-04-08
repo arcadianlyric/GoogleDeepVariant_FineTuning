@@ -31,6 +31,8 @@ This project serves as the retraining backend for [LFR_DataMonitor](https://gith
 Directly encodes the fragment length (insert size) distribution per read.
 Library prep changes (PCR-free vs PCR+, reagent batch, fragment size selection), sequencing mode switches (PE150 → SE600/stLFR), and protocol changes all strongly shift the insert size mean, N50, and CV.
 The pretrained WGS model was trained primarily on Illumina PE150 data (insert size ~300-500bp). When this distribution shifts, the pileup image "shape" changes significantly, causing silent accuracy degradation.
+Insert size data drift exmaple(output of [LFR_DataMonitor](https://github.com/arcadianlyric/LFR_DataMonitor)):
+![insert_size_drift](img/insert_size_drift.png)
 
 **2. base_quality (channel 2) — second most important**
 
