@@ -2,7 +2,7 @@
 
 **Adapting variant calling models to sequencing data distribution drift**
 
-When library preparation, reagent batches, or read-length modes change, DeepVariant's variant calling accuracy can silently degrade. This project provides a fine-tuning pipeline on Google Colab to quickly validate adapting a pretrained WGS model to target data. It connects upstream QC drift signals (insert size, GC bias, duplicate rate) to automated model retraining, compressing the detect → retrain cycle from days to hours. Designed for PE150 + SE600 (stLFR) mixed sequencing distribution shifts, serving as the retraining backend for the [LFR_DataMonitor](https://github.com/YourOrg/LFR_DataMonitor) drift detection pipeline.
+When library preparation, reagent batches, or read-length modes change, DeepVariant's variant calling accuracy can silently degrade. This project provides a fine-tuning pipeline on Google Colab to quickly validate adapting a pretrained WGS model to target data. It connects upstream QC drift signals (insert size, GC bias, duplicate rate) to automated model retraining, compressing the detect → retrain cycle. Designed for PE150 + SE600 (stLFR) mixed sequencing distribution shifts, serving as the retraining backend for the [LFR_DataMonitor](https://github.com/YourOrg/LFR_DataMonitor) drift detection pipeline.
 
 ---
 
