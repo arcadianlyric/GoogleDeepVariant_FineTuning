@@ -2,7 +2,7 @@
 
 **Adapting variant calling models to sequencing data distribution drift**
 
-When library preparation, reagent batches, or read-length modes change, DeepVariant's variant calling accuracy can silently degrade. This project provides a fine-tuning pipeline on Google Colab to quickly validate adapting a pretrained WGS model to target data. It connects upstream QC drift signals (insert size, GC bias, duplicate rate) to automated model retraining, compressing the detect → retrain cycle. Designed for PE150 + SE600 (stLFR) mixed sequencing distribution shifts, serving as the retraining backend for the [LFR_DataMonitor](https://github.com/YourOrg/LFR_DataMonitor) drift detection pipeline.
+When library preparation, reagent batches, read-length modes, or mapping strategies change, DeepVariant's variant calling accuracy can silently degrade. This project provides a local Linux CPU fine-tuning pipeline for adapting a pretrained WGS model to internal data. Previously, data could be sent to the Google DeepVariant team for model training, but that path has a long turnaround time and is hard to use for frequent parameter iteration. The current direction is to build local fine-tuning as a parallel/alternative path so LFR_DataMonitor drift signals can trigger repeated, auditable retraining as PE150, SE600, and mixed PE150+SE600 datasets evolve.
 
 ---
 
@@ -15,7 +15,9 @@ DeepVariant uses an inception_v3 CNN to call variants (SNV/Indel) from read pile
 
 **Key challenges**:
 - DeepVariant's CLI flags and training API changed significantly across versions (TF-slim before 1.5, Keras + ml_collections from 1.6+).
-- GPU passthrough is difficult with Google Colab + udocker; training typically runs on CPU only.
+- The earlier external-training route relied on sending data to the Google DeepVariant team; it validated the concept, but the turnaround is too long for high-frequency assay and parameter development.
+- Company servers do not provide CUDA/NVIDIA GPUs, so the primary implementation targets local Linux CPU fine-tuning first.
+- SE600 + PE150 mixed-distribution training needs more internal examples and frequent re-tuning because the data distribution changes during assay, mapping, and parameter development.
 - TFRecord GZIP outputs occasionally corrupted, VCF compression format errors, and other container environment issues.
 
 ---
@@ -128,7 +130,51 @@ GoogleDeepVariant_FineTuning/
 - Metrics: Precision, Recall, F1 (SNP and INDEL separately)
 
 
-## Quick Start (Colab)
+## Quick Start (Linux CPU Server)
+
+The `scripts/` pipeline is the recommended path for company Linux servers that
+do not have NVIDIA CUDA GPUs. It uses Docker CPU execution with
+`google/deepvariant:1.6.1` and defaults to a small PE150 chr22 smoke test.
+The cloud/Colab notebook remains as historical validation, while local training
+is now the main path for high-frequency internal tuning.
+
+1. Put inputs under the project directory:
+
+```text
+GoogleDeepVariant_FineTuning/
+├── data/
+│   └── ch22_E200013531L1.bam
+└── ref/
+    ├── GCA_000001405.15_GRCh38_no_alt_analysis_set.fa.gz
+    ├── truth_chroms_chr22.vcf
+    └── HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed
+```
+
+2. Edit `config/.env` if the project or reference path differs on the server.
+   The default training sample is `TRAIN_SAMPLE=pe150`.
+
+3. Run the CPU pipeline:
+
+```bash
+cd GoogleDeepVariant_FineTuning
+bash scripts/run_pipeline.sh
+```
+
+For a smoke test, `config/config.yaml` uses `num_training_steps: 200`. Increase
+to `10000-50000` for a real fine-tuning run after the small test succeeds.
+
+For SE600 + PE150 development, start with one stable sample mode (`TRAIN_SAMPLE=pe150`
+or `TRAIN_SAMPLE=se600`) and validate the full loop. Mixed training should be
+enabled only after enough internal PE150/SE600 examples are available and the
+channel configuration is kept consistent across datasets.
+
+## Historical Attempt: Colab / Cloud
+
+The Colab notebook was an early attempt to validate DeepVariant fine-tuning in
+the cloud. Separately, sending data to the Google DeepVariant team for training
+remains useful as an external reference, but the turnaround is too long for
+frequent parameter tuning. It is kept as historical context while local
+fine-tuning becomes the operational parallel/alternative path.
 
 1. Prepare data (upload MGI PE150 public data to Google Drive `/dv_finetune/`).
 
@@ -139,7 +185,7 @@ GoogleDeepVariant_FineTuning/
 - Cell 8: Fine-tune (using `/opt/deepvariant/bin/train`)
 - Cell 9–10: Calling + hap.py evaluation
 
-**Note**: The current Colab version runs training on CPU only. For production-scale training, use a GCP VM with native Docker + GPU.
+**Note**: The current Colab version runs training on CPU only. For production-scale training, a GCP VM with native Docker + GPU is possible, but local Linux CPU training is preferred for internal high-frequency retraining and data-governance reasons.
 
 ### Roadmap
 
